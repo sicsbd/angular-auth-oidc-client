@@ -57,22 +57,36 @@ export class OidcSecurityCommon {
 
     private storage_auth_nonce = 'authNonce';
 
-    public get authNonce(): string {
-        return this.retrieve(this.storage_auth_nonce) || '';
+    public isAuthNonceValid(nonce: string): boolean {
+        const nonces = this.getValuesFromSerializedCacheDictionary(this.storage_auth_nonce,
+            (_createDate, _value) => _value === nonce,
+            (_createDate) => (_createDate + (3600000)) < Date.now()); //1 hour expiration
+
+        const isValid = nonces.find((n) => n === nonce) !== undefined;
+
+        if(isValid) this.removeValueFromSerializedCacheDictionary(this.storage_auth_nonce, nonce);
+
+        return isValid;
     }
 
-    public set authNonce(value: string) {
-        this.store(this.storage_auth_nonce, value);
+    public addAuthNonce(value: string) {
+        this.addValueToSerializedCacheDictionary(this.storage_auth_nonce, value);
     }
 
     private storage_auth_state_control = 'authStateControl';
 
-    public get authStateControl(): string {
-        return this.retrieve(this.storage_auth_state_control) || '';
+    public getAuthStates(): string[] {
+        return this.getValuesFromSerializedCacheDictionary(this.storage_auth_state_control,
+            () => true,
+            (createDate) => (createDate + (3600000)) < Date.now()); //1 hour expiration
     }
 
-    public set authStateControl(value: string) {
-        this.store(this.storage_auth_state_control, value);
+    public addAuthState(value: string) {
+        this.addValueToSerializedCacheDictionary(this.storage_auth_state_control, value);
+    }
+
+    public removeAuthState(state: string) {
+        this.removeValueFromSerializedCacheDictionary(this.storage_auth_state_control, state);
     }
 
     private storage_session_state = 'session_state';
@@ -110,6 +124,52 @@ export class OidcSecurityCommon {
     }
 
     constructor(private oidcSecurityStorage: OidcSecurityStorage) {}
+
+    private addValueToSerializedCacheDictionary(storageKey: string, value: string) {
+        const serializedValue = this.retrieve(storageKey) || '{}';
+
+        let currentValue = JSON.parse(serializedValue);
+
+        currentValue[Date.now()] = value;
+
+        this.store(storageKey, JSON.stringify(currentValue));
+    }
+
+    private removeValueFromSerializedCacheDictionary(storageKey: string, value: string) {
+        this.getValuesFromSerializedCacheDictionary(storageKey,
+            () => false,
+            (_createDate, _value) => _value === value);
+    }
+
+    private getValuesFromSerializedCacheDictionary(storageKey: string,
+        getPredicate: (createDate: number, value: string) => boolean,
+        removePredicate: (createDate: number, value: string) => boolean): string[] {
+        const serializedValue = this.retrieve(storageKey) || '{}';
+        const currentValue = JSON.parse(serializedValue);
+        const keysToDelete: string[] = [];
+        const values: string[] = [];
+
+        for (let key in currentValue) {
+            if (currentValue.hasOwnProperty(key)) {
+                const dateAdded = Number(key);
+                if (dateAdded === NaN) continue;
+
+                if (removePredicate(dateAdded, currentValue[key])) {
+                    keysToDelete.push(dateAdded.toString());
+                } else if(getPredicate(dateAdded, currentValue[key])){
+                    values.push(currentValue[key]);
+                }
+            }
+        }
+
+        for (let key in keysToDelete.values()) {
+            delete currentValue[key];
+        }
+
+        this.store(storageKey, JSON.stringify(currentValue));
+
+        return values;
+    }
 
     private retrieve(key: string): any {
         return this.oidcSecurityStorage.read(key);
