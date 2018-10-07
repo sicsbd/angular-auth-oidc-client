@@ -85,17 +85,16 @@ export class OidcSecurityService {
                                 'IsAuthorizedRace: Silent Renew Refresh Session Complete')),
                             map(() => true)
                         ),
-                        timer(5000).pipe(  //backup, if nothing happens after 5 seconds stop waiting
+                        timer(5000).pipe( // backup, if nothing happens after 5 seconds stop waiting
                             tap(() => this.loggerService.logWarning(
                                 'IsAuthorizedRace: Timeout reached. Emitting.')),
                             map(() => true)
-                        ) 
+                        )
                     )
                 );
 
-				// This is required to make the init check if the existing token is valid, but
-				// causes 2 login callbacks with a first login.
-                //this.refreshSession();
+                // This is required to make the init check if the existing token is valid
+                this.refreshSession();
 
                 return race$;
             }),

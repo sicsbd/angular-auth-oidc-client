@@ -5,7 +5,19 @@ export type SilentRenewState = 'running' | '';
 
 @Injectable()
 export class OidcSecurityCommon {
+
     private storage_auth_result = 'authorizationResult';
+    private storage_auth_state_control = 'authStateControl';
+    private storage_access_token = 'authorizationData';
+    private storage_id_token = 'authorizationDataIdToken';
+    private storage_is_authorized = '_isAuthorized';
+    private storage_user_data = 'userData';
+    private storage_auth_nonce = 'authNonce';
+    private storage_session_state = 'session_state';
+    private storage_silent_renew_running = 'storage_silent_renew_running';
+    private storage_custom_request_params = 'storage_custom_request_params';
+
+    constructor(private oidcSecurityStorage: OidcSecurityStorage) { }
 
     public get authResult(): any {
         return this.retrieve(this.storage_auth_result);
@@ -15,8 +27,6 @@ export class OidcSecurityCommon {
         this.store(this.storage_auth_result, value);
     }
 
-    private storage_access_token = 'authorizationData';
-
     public get accessToken(): string {
         return this.retrieve(this.storage_access_token) || '';
     }
@@ -24,8 +34,6 @@ export class OidcSecurityCommon {
     public set accessToken(value: string) {
         this.store(this.storage_access_token, value);
     }
-
-    private storage_id_token = 'authorizationDataIdToken';
 
     public get idToken(): string {
         return this.retrieve(this.storage_id_token) || '';
@@ -35,8 +43,6 @@ export class OidcSecurityCommon {
         this.store(this.storage_id_token, value);
     }
 
-    private storage_is_authorized = '_isAuthorized';
-
     public get isAuthorized(): boolean | undefined {
         return this.retrieve(this.storage_is_authorized);
     }
@@ -44,8 +50,6 @@ export class OidcSecurityCommon {
     public set isAuthorized(value: boolean | undefined) {
         this.store(this.storage_is_authorized, value);
     }
-
-    private storage_user_data = 'userData';
 
     public get userData(): any {
         return this.retrieve(this.storage_user_data);
@@ -55,42 +59,6 @@ export class OidcSecurityCommon {
         this.store(this.storage_user_data, value);
     }
 
-    private storage_auth_nonce = 'authNonce';
-
-    public isAuthNonceValid(nonce: string): boolean {
-        const nonces = this.getValuesFromSerializedCacheDictionary(this.storage_auth_nonce,
-            (_createDate, _value) => _value === nonce,
-            (_createDate) => (_createDate + (3600000)) < Date.now()); //1 hour expiration
-
-        const isValid = nonces.find((n) => n === nonce) !== undefined;
-
-        if(isValid) this.removeValueFromSerializedCacheDictionary(this.storage_auth_nonce, nonce);
-
-        return isValid;
-    }
-
-    public addAuthNonce(value: string) {
-        this.addValueToSerializedCacheDictionary(this.storage_auth_nonce, value);
-    }
-
-    private storage_auth_state_control = 'authStateControl';
-
-    public getAuthStates(): string[] {
-        return this.getValuesFromSerializedCacheDictionary(this.storage_auth_state_control,
-            () => true,
-            (createDate) => (createDate + (3600000)) < Date.now()); //1 hour expiration
-    }
-
-    public addAuthState(value: string) {
-        this.addValueToSerializedCacheDictionary(this.storage_auth_state_control, value);
-    }
-
-    public removeAuthState(state: string) {
-        this.removeValueFromSerializedCacheDictionary(this.storage_auth_state_control, state);
-    }
-
-    private storage_session_state = 'session_state';
-
     public get sessionState(): any {
         return this.retrieve(this.storage_session_state);
     }
@@ -99,8 +67,6 @@ export class OidcSecurityCommon {
         this.store(this.storage_session_state, value);
     }
 
-    private storage_silent_renew_running = 'storage_silent_renew_running';
-
     public get silentRenewRunning(): SilentRenewState {
         return this.retrieve(this.storage_silent_renew_running) || '';
     }
@@ -108,8 +74,6 @@ export class OidcSecurityCommon {
     public set silentRenewRunning(value: SilentRenewState) {
         this.store(this.storage_silent_renew_running, value);
     }
-
-    private storage_custom_request_params = 'storage_custom_request_params';
 
     public get customRequestParams(): {
         [key: string]: string | number | boolean;
@@ -123,12 +87,10 @@ export class OidcSecurityCommon {
         this.store(this.storage_custom_request_params, value);
     }
 
-    constructor(private oidcSecurityStorage: OidcSecurityStorage) {}
-
     private addValueToSerializedCacheDictionary(storageKey: string, value: string) {
         const serializedValue = this.retrieve(storageKey) || '{}';
 
-        let currentValue = JSON.parse(serializedValue);
+        const currentValue = JSON.parse(serializedValue);
 
         currentValue[Date.now()] = value;
 
@@ -149,21 +111,25 @@ export class OidcSecurityCommon {
         const keysToDelete: string[] = [];
         const values: string[] = [];
 
-        for (let key in currentValue) {
+        for (const key in currentValue) {
             if (currentValue.hasOwnProperty(key)) {
                 const dateAdded = Number(key);
-                if (dateAdded === NaN) continue;
+                if (dateAdded === NaN) {
+                    continue;
+                }
 
                 if (removePredicate(dateAdded, currentValue[key])) {
                     keysToDelete.push(dateAdded.toString());
-                } else if(getPredicate(dateAdded, currentValue[key])){
+                } else if (getPredicate(dateAdded, currentValue[key])) {
                     values.push(currentValue[key]);
                 }
             }
         }
 
-        for (let key in keysToDelete.values()) {
-            delete currentValue[key];
+        for (const key in keysToDelete.values()) {
+            if (key) {
+                delete currentValue[key];
+            }
         }
 
         this.store(storageKey, JSON.stringify(currentValue));
@@ -198,4 +164,37 @@ export class OidcSecurityCommon {
     getIdToken(): any {
         return this.retrieve(this.storage_id_token);
     }
+
+    isAuthNonceValid(nonce: string): boolean {
+        const nonces = this.getValuesFromSerializedCacheDictionary(this.storage_auth_nonce,
+            (_createDate, _value) => _value === nonce,
+            (_createDate) => (_createDate + (3600000)) < Date.now()); // 1 hour expiration
+
+        const isValid = nonces.find((n) => n === nonce) !== undefined;
+
+        if (isValid) {
+            this.removeValueFromSerializedCacheDictionary(this.storage_auth_nonce, nonce);
+        }
+
+        return isValid;
+    }
+
+    addAuthNonce(value: string) {
+        this.addValueToSerializedCacheDictionary(this.storage_auth_nonce, value);
+    }
+
+    getAuthStates(): string[] {
+        return this.getValuesFromSerializedCacheDictionary(this.storage_auth_state_control,
+            () => true,
+            (createDate) => (createDate + (3600000)) < Date.now()); // 1 hour expiration
+    }
+
+    addAuthState(value: string) {
+        this.addValueToSerializedCacheDictionary(this.storage_auth_state_control, value);
+    }
+
+    removeAuthState(state: string) {
+        this.removeValueFromSerializedCacheDictionary(this.storage_auth_state_control, state);
+    }
+
 }
