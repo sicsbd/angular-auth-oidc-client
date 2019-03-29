@@ -44,3 +44,5 @@ testem.log
 Thumbs.db
 
 /.vs
+/projects/angular-auth-oidc-client/**/*.js.map
+/projects/angular-auth-oidc-client/**/*.js

@@ -1,4 +1,3 @@
-// tslint:disable:variable-name
 import { ValidationResult } from './validation-result.enum';
 
 export class ValidateStateResult {
@@ -10,4 +9,3 @@ export class ValidateStateResult {
         public state: ValidationResult = ValidationResult.NotSet
     ) {}
 }
-// tslint:enable:variable-name

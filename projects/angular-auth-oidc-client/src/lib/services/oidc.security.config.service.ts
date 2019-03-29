@@ -5,12 +5,12 @@ import { catchError, map } from 'rxjs/operators';
 
 @Injectable()
 export class OidcConfigService {
-    private onConfigurationLoadedInternal = new Subject<boolean>();
+    private _onConfigurationLoaded = new Subject<boolean>();
     clientConfiguration: any;
     wellKnownEndpoints: any;
 
     public get onConfigurationLoaded(): Observable<boolean> {
-        return this.onConfigurationLoadedInternal.asObservable();
+        return this._onConfigurationLoaded.asObservable();
     }
 
     constructor(private readonly httpClient: HttpClient) {}
@@ -25,7 +25,7 @@ export class OidcConfigService {
                 }),
                 catchError(error => {
                     console.error(`OidcConfigService 'load' threw an error on calling ${configUrl}`, error);
-                    this.onConfigurationLoadedInternal.next(false);
+                    this._onConfigurationLoaded.next(false);
                     return of(false);
                 })
             )
@@ -40,11 +40,11 @@ export class OidcConfigService {
             .pipe(
                 map(response => {
                     this.wellKnownEndpoints = response;
-                    this.onConfigurationLoadedInternal.next(true);
+                    this._onConfigurationLoaded.next(true);
                 }),
                 catchError(error => {
                     console.error(`OidcConfigService 'load_using_stsServer' threw an error on calling ${stsServer}`, error);
-                    this.onConfigurationLoadedInternal.next(false);
+                    this._onConfigurationLoaded.next(false);
                     return of(false);
                 })
             )
@@ -57,11 +57,11 @@ export class OidcConfigService {
             .pipe(
                 map(response => {
                     this.wellKnownEndpoints = response;
-                    this.onConfigurationLoadedInternal.next(true);
+                    this._onConfigurationLoaded.next(true);
                 }),
                 catchError(error => {
                     console.error(`OidcConfigService 'load_using_custom_stsServer' threw an error on calling ${url}`, error);
-                    this.onConfigurationLoadedInternal.next(false);
+                    this._onConfigurationLoaded.next(false);
                     return of(false);
                 })
             )

@@ -1,4 +1,3 @@
-// tslint:disable:variable-name
 export class AuthWellKnownEndpoints {
     issuer = '';
     jwks_uri = '';
@@ -34,4 +33,3 @@ export class AuthWellKnownEndpoints {
         }
     }
 }
-// tslint:enable:variable-name

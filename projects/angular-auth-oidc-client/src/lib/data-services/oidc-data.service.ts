@@ -7,33 +7,30 @@ export class OidcDataService {
     constructor(private httpClient: HttpClient) {}
 
     getWellknownEndpoints<T>(url: string): Observable<T> {
-        const headers = this.getStandardHttpHeaders();
+        let headers = new HttpHeaders();
+        headers = headers.set('Accept', 'application/json');
 
         return this.httpClient.get<T>(url, {
-            headers,
+            headers: headers,
         });
     }
 
     getIdentityUserData<T>(url: string, token: string): Observable<T> {
-        let headers = this.getStandardHttpHeaders();
+        let headers = new HttpHeaders();
+        headers = headers.set('Accept', 'application/json');
         headers = headers.set('Authorization', 'Bearer ' + decodeURIComponent(token));
 
         return this.httpClient.get<T>(url, {
-            headers,
+            headers: headers,
         });
     }
 
     get<T>(url: string): Observable<T> {
-        const headers = this.getStandardHttpHeaders();
-
-        return this.httpClient.get<T>(url, {
-            headers,
-        });
-    }
-
-    private getStandardHttpHeaders() {
         let headers = new HttpHeaders();
         headers = headers.set('Accept', 'application/json');
-        return headers;
+
+        return this.httpClient.get<T>(url, {
+            headers: headers,
+        });
     }
 }
